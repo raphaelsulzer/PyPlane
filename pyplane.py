@@ -54,7 +54,7 @@ class PyPlane:
             raise RuntimeError
 
 
-    def get_convex_hull_of_projected_points(self,points,return_index=False):
+    def get_hull_points_of_projected_points(self,points,return_index=False):
 
         p2d = self.to_2d(points)
 
@@ -63,10 +63,10 @@ class PyPlane:
         if return_index:
             return p2d[ch.vertices], ch.vertices
         else:
-            return points[ch.vertices]
+            return p2d[ch.vertices]
 
 
-    def get_trimesh_of_projected_points(self,points,type="convex_hull",return_index=False):
+    def get_trimesh_of_projected_points(self,points,type="convex_hull"):
 
         if type == "convex_hull":
             p2d = self.to_2d(points)
