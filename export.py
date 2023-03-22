@@ -2,6 +2,8 @@ import os
 import numpy as np
 from scipy.spatial import ConvexHull
 from copy import deepcopy
+from pyplane import PyPlane
+
 
 class PlaneExporter:
 
@@ -117,9 +119,12 @@ class PlaneExporter:
             f.close()
 
 
-    def export_planes_to_ply(self,filename,points,group_num_points,group_points,group_parameters,color=None):
+    def export_planes_to_ply(self,filename,points,group_num_points,group_points,group_parameters,colors=None):
 
         """this writes all planes to a ply file"""
+
+        if colors is None:
+            colors = np.random.randint(0,255,size=(group_parameters.shape[0],3))
 
         all_count=0
         hull_count=0
@@ -128,21 +133,20 @@ class PlaneExporter:
         for i, plane in enumerate(group_parameters):
 
             ids = group_points[all_count:(group_num_points[i]+all_count)]
-            p = points[ids]
 
-            plane += (np.random.rand(4, ) * 0.001)
+            # p = points[ids]
+            # plane += (np.random.rand(4, ) * 0.001)
+            # # project verts to plane
+            # # https://www.baeldung.com/cs/3d-point-2d-plane
+            # k = (-plane[-1] -plane[0]*p[:, 0] -plane[1]*p[:, 1] -plane[2]*p[:, 2]) / \
+            #     (plane[0] ** 2 + plane[1] ** 2 + plane[2] ** 2)
+            # pp = np.asarray([p[:, 0] + k * plane[0], p[:, 1] + k * plane[1], p[:, 2] + k * plane[2]]).transpose()
+            # ch = ConvexHull(pp[:,:2])
+            # hull_points = ch.points[ch.vertices]
+            # all_hull_points.append(np.hstack((hull_points, pp[ch.vertices,2,np.newaxis])))
 
-            # project verts to plane
-            # https://www.baeldung.com/cs/3d-point-2d-plane
-            k = (-plane[-1] -plane[0]*p[:, 0] -plane[1]*p[:, 1] -plane[2]*p[:, 2]) / \
-                (plane[0] ** 2 + plane[1] ** 2 + plane[2] ** 2)
-            pp = np.asarray([p[:, 0] + k * plane[0], p[:, 1] + k * plane[1], p[:, 2] + k * plane[2]]).transpose()
-
-
-            ch = ConvexHull(pp[:,:2])
-
-            hull_points = ch.points[ch.vertices]
-            all_hull_points.append(np.hstack((hull_points, pp[ch.vertices,2,np.newaxis])))
+            hull_points = PyPlane(plane).get_hull_points_of_projected_points(points[ids],dim=3)
+            all_hull_points.append(hull_points)
 
             hull_verts = np.arange(hull_points.shape[0])
             all_hull_verts.append(hull_verts)
@@ -171,16 +175,13 @@ class PlaneExporter:
         for p in all_hull_points:
             f.write("{:.6} {:.6} {:.6}\n".format(p[0],p[1],p[2]))
 
-        for plane in all_hull_verts:
+        for i,plane in enumerate(all_hull_verts):
             f.write(str(plane.shape[0]))
             f.write(" ")
             for id in plane:
                 f.write(str(id)+" ")
 
-            if color is None:
-                c = (np.random.random(size=3) * 255).astype(int)
-            else:
-                c = color
+            c = colors[i]
             f.write("{} ".format(c[0]))
             f.write("{} ".format(c[1]))
             f.write("{}\n".format(c[2]))
