@@ -22,12 +22,34 @@ class PyPlane:
         self.inliers = inliers
 
 
+    def _project_points_to_plane(self,points,plane):
+
+        ### project inlier points to plane
+        ## https://www.baeldung.com/cs/3d-point-2d-plane
+        k = (-plane[-1] - plane[0] * points[:, 0] - plane[1] * points[:, 1] - plane[2] * points[:, 2]) / (plane[0] ** 2 + plane[1] ** 2 + plane[2] ** 2)
+        pp = np.asarray([points[:, 0] + k * plane[0], points[:, 1] + k * plane[1], points[:, 2] + k * plane[2]])
+
+        ### probably not necessary:
+        ## make e1 and e2 (see bottom of page linked above)
+        ## take a starting vector (e0) and take a component of this vector which is nonzero (see here: https://stackoverflow.com/a/33758795)
+        z = np.argmax(np.abs(plane[:3]))
+        y = (z+1)%3
+        x = (y+1)%3
+        e0 = np.array(plane[:3])
+        e0 = e0/np.linalg.norm(e0)
+        e1 = np.zeros(3)
+        ## reverse the non-zero component and put it on a different axis
+        e1[x], e1[y], e1[z] = e0[x], -e0[z], e0[y]
+        ## take the cross product of e0 and e1 to make e2
+        e2 = np.cross(e0,e1)
+        e12 = np.array([e1,e2])
+        return (e12@pp).transpose()
 
     def to_2d(self,points,return_max_coord=False):
 
         ### project inlier points to plane
         ## https://www.baeldung.com/cs/3d-point-2d-plane
-        k = (self.a * points[:, 0] - self.b * points[:, 1] - self.c * points[:, 2] - self.d) / (self.a ** 2 + self.b ** 2 + self.c ** 2)
+        k = (-self.a * points[:, 0] -self.b * points[:, 1] -self.c * points[:, 2] -self.d) / (self.a ** 2 + self.b ** 2 + self.c ** 2)
         pp = np.asarray([points[:, 0] + k * self.a, points[:, 1] + k * self.b, points[:, 2] + k * self.c])
 
         ## take the max coordinate coords away to make the 2d points

@@ -1,7 +1,7 @@
-
 import os
 import numpy as np
 from scipy.spatial import ConvexHull
+from copy import deepcopy
 
 class PlaneExporter:
 
@@ -27,6 +27,7 @@ class PlaneExporter:
 
     def export_plane(self,path,plane,points,count,subpaths=["planes","point_groups"],color=None):
 
+        plane = deepcopy(plane)
 
         c = color if color is not None else [0.5,0.5,0.5]
 
@@ -76,6 +77,8 @@ class PlaneExporter:
         os.makedirs(os.path.join(path,"point_groups"), exist_ok=True)
 
         for i, plane in enumerate(planes):
+
+            plane = deepcopy(plane)
 
             plane += (np.random.rand(4, ) * 0.001)
 
