@@ -1,8 +1,6 @@
-import os, sys
 import numpy as np
 from scipy.spatial import ConvexHull, Delaunay
 import trimesh
-import open3d as o3d
 
 class PyPlane:
 
@@ -104,16 +102,17 @@ class PyPlane:
     def get_trimesh_of_projected_points(self,points,type="convex_hull"):
 
         if type == "convex_hull":
-            p2d = self.to_2d(points)
+            pp = self.project_points_to_plane(points)
+            p2d = np.delete(pp, self.max_coord, axis=1)
             ch = ConvexHull(p2d)
-            chp = p2d[ch.vertices]
-            tri = Delaunay(chp)
-            return trimesh.Trimesh(vertices=points[ch.vertices],faces=tri.simplices)
+            tri = Delaunay(p2d[ch.vertices,:])
+            return trimesh.Trimesh(vertices=pp[ch.vertices],faces=tri.simplices)
 
         elif type == "all":
-            p2d = self.to_2d(points)
+            pp = self.project_points_to_plane(points)
+            p2d = np.delete(pp, self.max_coord, axis=1)
             tri = Delaunay(p2d)
-            return trimesh.Trimesh(vertices=points,faces=tri.simplices)
+            return trimesh.Trimesh(vertices=pp,faces=tri.simplices)
 
         else:
             raise NotImplementedError

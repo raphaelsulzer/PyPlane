@@ -130,22 +130,15 @@ class PlaneExporter:
         hull_count=0
         all_hull_points = []
         all_hull_verts = []
+        all_point_groups = []
         for i, plane in enumerate(group_parameters):
 
             ids = group_points[all_count:(group_num_points[i]+all_count)]
 
-            # p = points[ids]
-            # plane += (np.random.rand(4, ) * 0.001)
-            # # project verts to plane
-            # # https://www.baeldung.com/cs/3d-point-2d-plane
-            # k = (-plane[-1] -plane[0]*p[:, 0] -plane[1]*p[:, 1] -plane[2]*p[:, 2]) / \
-            #     (plane[0] ** 2 + plane[1] ** 2 + plane[2] ** 2)
-            # pp = np.asarray([p[:, 0] + k * plane[0], p[:, 1] + k * plane[1], p[:, 2] + k * plane[2]]).transpose()
-            # ch = ConvexHull(pp[:,:2])
-            # hull_points = ch.points[ch.vertices]
-            # all_hull_points.append(np.hstack((hull_points, pp[ch.vertices,2,np.newaxis])))
+            all_point_groups.append(points[ids])
 
             hull_points = PyPlane(plane).get_hull_points_of_projected_points(points[ids],dim=3)
+            hull_points = PyPlane(plane).project_points_to_plane(hull_points)
             all_hull_points.append(hull_points)
 
             hull_verts = np.arange(hull_points.shape[0])
@@ -158,6 +151,7 @@ class PlaneExporter:
         all_hull_points = np.concatenate(all_hull_points)
 
 
+        ### planes
         f = open(filename,"w")
         f.write("ply\n")
         f.write("format ascii 1.0\n")
@@ -166,6 +160,87 @@ class PlaneExporter:
         f.write("property float y\n")
         f.write("property float z\n")
         f.write("element face {}\n".format(group_parameters.shape[0]))
+        f.write("property list uchar int vertex_index\n")
+        f.write("property uchar red\n")
+        f.write("property uchar green\n")
+        f.write("property uchar blue\n")
+        f.write("end_header\n")
+
+        for p in all_hull_points:
+            f.write("{:.6} {:.6} {:.6}\n".format(p[0],p[1],p[2]))
+
+        for i,plane in enumerate(all_hull_verts):
+            f.write(str(plane.shape[0]))
+            f.write(" ")
+            for id in plane:
+                f.write(str(id)+" ")
+
+            c = colors[i]
+            f.write("{} ".format(c[0]))
+            f.write("{} ".format(c[1]))
+            f.write("{}\n".format(c[2]))
+
+        f.close()
+
+
+    def export_points_and_planes(self,filenames,points,planes,colors=None):
+
+        """this writes all planes to a ply file"""
+
+        if colors is None:
+            colors = np.random.randint(0,255,size=(planes.shape[0],3))
+
+        hull_count=0
+        all_hull_points = []
+        all_hull_verts = []
+        for i, plane in enumerate(planes):
+
+            pts = points[i]
+
+
+            hull_points = PyPlane(plane).get_hull_points_of_projected_points(pts,dim=3)
+            hull_points = PyPlane(plane).project_points_to_plane(hull_points)
+            all_hull_points.append(hull_points)
+
+            hull_verts = np.arange(hull_points.shape[0])
+            all_hull_verts.append(hull_verts)
+            hull_verts+=hull_count
+            hull_count+=hull_verts.shape[0]
+
+
+        all_hull_points = np.concatenate(all_hull_points)
+
+
+        ### points
+        f = open(filenames[0],"w")
+        f.write("ply\n")
+        f.write("format ascii 1.0\n")
+        f.write("element vertex {}\n".format(np.concatenate(points).shape[0]))
+        f.write("property float x\n")
+        f.write("property float y\n")
+        f.write("property float z\n")
+        f.write("property uchar red\n")
+        f.write("property uchar green\n")
+        f.write("property uchar blue\n")
+        f.write("end_header\n")
+
+        for i,pg in enumerate(points):
+            col = colors[i]
+            for pt in pg:
+                f.write("{:.6} {:.6} {:.6} {} {} {}\n".format(pt[0],pt[1],pt[2],col[0],col[1],col[2]))
+
+        f.close()
+
+
+        ### planes
+        f = open(filenames[1],"w")
+        f.write("ply\n")
+        f.write("format ascii 1.0\n")
+        f.write("element vertex {}\n".format(all_hull_points.shape[0]))
+        f.write("property float x\n")
+        f.write("property float y\n")
+        f.write("property float z\n")
+        f.write("element face {}\n".format(planes.shape[0]))
         f.write("property list uchar int vertex_index\n")
         f.write("property uchar red\n")
         f.write("property uchar green\n")
