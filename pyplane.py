@@ -1,6 +1,62 @@
 import numpy as np
 from scipy.spatial import ConvexHull, Delaunay
 import trimesh
+from fractions import Fraction
+from sage.all import Matrix, vector, QQ
+
+class SagePlane:
+
+    def __init__(self,params):
+
+        self.a = QQ(params[0]); self.b = QQ(params[1]); self.c = QQ(params[2]); self.d = QQ(params[3])
+        self.normal = vector((self.a,self.b,self.c))
+        self.vector_rep = vector((self.a,self.b,self.c,self.d))
+
+        self.max_coord=np.argmax(np.abs((self.vector_rep.numpy())))
+
+
+
+
+    def to_2d(self,points,return_max_coord=False):
+
+        ### project inlier points to plane
+        ## https://www.baeldung.com/cs/3d-point-2d-plane
+        pp = self.project_points_to_plane(points)
+
+        ## take the max coordinate coords away to make the 2d points
+        if return_max_coord:
+            return np.delete(pp, self.max_coord, axis=1), points[:,self.max_coord]
+        else:
+            return np.delete(pp,self.max_coord,axis=1)
+
+
+    def project_points_to_plane(self,points):
+
+        ones = [QQ(1.0)]*points.shape[0]
+        ones = np.array(ones,dtype=object).reshape((points.shape[0],1))
+        pts = Matrix(QQ,np.hstack((points,ones)))
+
+        k = (self.vector_rep*pts.transpose())/self.normal.norm()
+
+        return Matrix(QQ,points)+(Matrix(self.normal).transpose()*Matrix(k)).transpose()
+
+        # outpoints = []
+        # for i,tk in enumerate(k):
+        #     outpoints.append(vector(QQ,points[i,:])+self.normal*tk)
+        #
+        #
+        # return outpoints
+
+        ### project inlier points to plane
+        ## https://www.baeldung.com/cs/3d-point-2d-plane
+        # k = (-self.a * points[:, 0] - self.b * points[:, 1] - self.c * points[:, 2] - self.d) / (
+        #             self.a ** 2 + self.b ** 2 + self.c ** 2)
+        # # return np.asarray([points[:, 0] + k * self.a, points[:, 1] + k * self.b, points[:, 2] + k * self.c]).transpose()
+        # return np.asarray([points[:, 0] + k * self.a, points[:, 1] + k * self.b, points[:, 2] + k * self.c]).transpose()
+
+
+
+
 
 class PyPlane:
 
@@ -20,11 +76,13 @@ class PyPlane:
         self.inliers = inliers
 
 
+
     def project_points_to_plane_coordinate_system(self,points):
 
         ### project inlier points to plane
         ## https://www.baeldung.com/cs/3d-point-2d-plane
-        pp = self.project_points_to_plane(points).transpose()
+        # pp = self.project_points_to_plane(points).transpose()
+        pp = self.project_points_to_plane(points)
 
         ## make e1 and e2 (see bottom of page linked above)
         ## take a starting vector (e0) and take a component of this vector which is nonzero (see here: https://stackoverflow.com/a/33758795)
@@ -47,7 +105,9 @@ class PyPlane:
         ## https://www.baeldung.com/cs/3d-point-2d-plane
         k = (-self.a * points[:, 0] - self.b * points[:, 1] - self.c * points[:, 2] - self.d) / (
                     self.a ** 2 + self.b ** 2 + self.c ** 2)
+        # return np.asarray([points[:, 0] + k * self.a, points[:, 1] + k * self.b, points[:, 2] + k * self.c]).transpose()
         return np.asarray([points[:, 0] + k * self.a, points[:, 1] + k * self.b, points[:, 2] + k * self.c]).transpose()
+
 
 
     def to_2d(self,points,return_max_coord=False):
@@ -82,14 +142,15 @@ class PyPlane:
 
     def get_hull_points_of_projected_points(self,points,dim=2,return_index=False):
 
-        p2d = self.to_2d(points)
+        pp = self.project_points_to_plane(points)
+        p2d = np.delete(pp, self.max_coord, axis=1)
 
         ch = ConvexHull(p2d)
 
         if dim == 2:
             pts = p2d[ch.vertices]
         elif dim == 3:
-            pts = points[ch.vertices]
+            pts = pp[ch.vertices]
         else:
             NotImplementedError
 
