@@ -137,7 +137,7 @@ class PlaneExporter:
 
             all_point_groups.append(points[ids])
 
-            hull_points = PyPlane(plane).get_hull_points_of_projected_points(points[ids],dim=3)
+            hull_points = PyPlane(plane).get_convex_hull_points_of_projected_points(points[ids],dim=3)
             hull_points = PyPlane(plane).project_points_to_plane(hull_points)
             all_hull_points.append(hull_points)
 
@@ -160,7 +160,7 @@ class PlaneExporter:
         f.write("property float y\n")
         f.write("property float z\n")
         f.write("element face {}\n".format(group_parameters.shape[0]))
-        f.write("property list uchar int vertex_index\n")
+        f.write("property list uchar int vertex_indices\n")
         f.write("property uchar red\n")
         f.write("property uchar green\n")
         f.write("property uchar blue\n")
@@ -188,24 +188,31 @@ class PlaneExporter:
         """this writes all planes to a ply file"""
 
         if colors is None:
-            colors = np.random.randint(0,255,size=(planes.shape[0],3))
+            colors = np.random.randint(100,255,size=(planes.shape[0],3))
 
         hull_count=0
         all_hull_points = []
         all_hull_verts = []
+        pcolors = []
         for i, plane in enumerate(planes):
+
+
 
             pts = points[i]
 
-
-            hull_points = PyPlane(plane).get_hull_points_of_projected_points(pts,dim=3)
-            hull_points = PyPlane(plane).project_points_to_plane(hull_points)
+            hull_points = PyPlane(plane).get_convex_hull_points_of_projected_points(pts,dim=3)
+            # hull_points = PyPlane(plane).project_points_to_plane(hull_points)
             all_hull_points.append(hull_points)
 
             hull_verts = np.arange(hull_points.shape[0])
             all_hull_verts.append(hull_verts)
             hull_verts+=hull_count
             hull_count+=hull_verts.shape[0]
+
+            for j in range(hull_points.shape[0]):
+                pcolors.append(colors[i])
+
+
 
 
         all_hull_points = np.concatenate(all_hull_points)
@@ -240,15 +247,18 @@ class PlaneExporter:
         f.write("property float x\n")
         f.write("property float y\n")
         f.write("property float z\n")
+        f.write("property uchar red\n")
+        f.write("property uchar green\n")
+        f.write("property uchar blue\n")
         f.write("element face {}\n".format(planes.shape[0]))
-        f.write("property list uchar int vertex_index\n")
+        f.write("property list uchar int vertex_indices\n")
         f.write("property uchar red\n")
         f.write("property uchar green\n")
         f.write("property uchar blue\n")
         f.write("end_header\n")
 
-        for p in all_hull_points:
-            f.write("{:.6} {:.6} {:.6}\n".format(p[0],p[1],p[2]))
+        for i,p in enumerate(all_hull_points):
+            f.write("{:.6} {:.6} {:.6} {} {} {}\n".format(p[0],p[1],p[2],pcolors[i][0],pcolors[i][1],pcolors[i][2]))
 
         for i,plane in enumerate(all_hull_verts):
             f.write(str(plane.shape[0]))

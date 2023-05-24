@@ -30,6 +30,9 @@ class SagePlane:
             return np.delete(pp,self.max_coord,axis=1)
 
 
+
+
+
     def project_points_to_plane(self,points):
 
         ones = [QQ(1.0)]*points.shape[0]
@@ -53,6 +56,29 @@ class SagePlane:
         #             self.a ** 2 + self.b ** 2 + self.c ** 2)
         # # return np.asarray([points[:, 0] + k * self.a, points[:, 1] + k * self.b, points[:, 2] + k * self.c]).transpose()
         # return np.asarray([points[:, 0] + k * self.a, points[:, 1] + k * self.b, points[:, 2] + k * self.c]).transpose()
+
+
+
+class ProjectedConvexHull:
+
+    def __init__(self,plane_params,points):
+
+        self.plane_params = plane_params
+
+        self.pyplane = PyPlane(plane_params)
+
+
+        pp = self.pyplane.project_points_to_plane(points)
+        p2d = np.delete(pp, self.pyplane.max_coord, axis=1)
+
+        self.hull = ConvexHull(p2d)
+
+        self.all_points = pp # actually all projected points
+        self.hull_points = self.all_points[self.hull.vertices]
+
+
+
+
 
 
 
@@ -101,6 +127,8 @@ class PyPlane:
 
     def project_points_to_plane(self,points):
 
+
+
         ### project inlier points to plane
         ## https://www.baeldung.com/cs/3d-point-2d-plane
         k = (-self.a * points[:, 0] - self.b * points[:, 1] - self.c * points[:, 2] - self.d) / (
@@ -140,7 +168,9 @@ class PyPlane:
             raise RuntimeError
 
 
-    def get_hull_points_of_projected_points(self,points,dim=2,return_index=False):
+
+
+    def get_convex_hull_points_of_projected_points(self,points,dim=2,return_index=False):
 
         pp = self.project_points_to_plane(points)
         p2d = np.delete(pp, self.max_coord, axis=1)
